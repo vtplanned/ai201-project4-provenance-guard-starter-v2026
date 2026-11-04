@@ -79,8 +79,8 @@ Across the inputs I try, **each of the 3 labels (high-confidence human, unsure,
 high-confidence AI) is returned at least once**, and **every score from 0.00 to
 1.00 maps to exactly one of them** (checked by calling `score_to_label` on 0.00,
 0.01, ..., 1.00 and seeing no error and no missing label). Two scores 0.02 apart
-on either side of a threshold, such as 0.63 and 0.67, return different label
-text.
+on either side of a threshold, such as 0.34 and 0.36, or 0.69 and 0.71, return
+different label text.
 
 **Why this target:** The "unsure" label is the most important one for a system
 where false accusations are expensive, and it is also the one a careless range
