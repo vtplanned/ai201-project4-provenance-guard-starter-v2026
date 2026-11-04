@@ -54,8 +54,18 @@ DETECTOR_MAX_TOKENS = 400
 # down BEFORE you code it, and to put the numbers in your README. Whatever you
 # decide, it goes here.
 
-WEIGHT_MODEL_SIGNAL = 0.5
-WEIGHT_STYLE_SIGNAL = 0.5
+WEIGHT_MODEL_SIGNAL = 0.6
+WEIGHT_STYLE_SIGNAL = 0.4
+
+# The disagreement rule (see scoring.py::combine_signals). High-confidence AI is
+# the expensive label, so it needs BOTH signals to lean AI: if either one is
+# below this, the combined score is held just under AI_THRESHOLD.
+AI_CONFIRM_FLOOR = 0.50
+
+# Input limits for /submit.
+MAX_TEXT_CHARS = 20_000      # about 3,500 words; the model only reads ~300 anyway
+MIN_TEXT_WORDS = 3           # the model can't score fewer than ~3 tokens
+MAX_REASONING_CHARS = 5_000  # appeals
 
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
@@ -72,7 +82,7 @@ WEIGHT_STYLE_SIGNAL = 0.5
 # that decide who pays for it.
 
 HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.65
+AI_THRESHOLD = 0.70
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub

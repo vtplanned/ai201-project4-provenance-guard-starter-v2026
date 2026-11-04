@@ -19,6 +19,20 @@ you claim, so that line should read `scoring.py::combine_signals`.
 import config
 
 
+LABEL_AI = (
+    "This looks like it was probably written with the help of an AI tool. "
+    "Our check isn't perfect and can be wrong about real writers. If you wrote "
+    "this yourself, you can appeal, and a person will look at it."
+)
+LABEL_HUMAN = "We think this was probably written by a person."
+LABEL_UNSURE = (
+    "We can't tell whether this was written by a person or with AI help. "
+    "Nothing is being held against you. Plenty of people write in a way our "
+    "check can't read clearly. If you'd like someone to look at it anyway, "
+    "you can appeal."
+)
+
+
 def combine_signals(model_score: float, style_score: float) -> float:
     """
     Combine two 0–1 signals into one 0–1 score. ← TODO (Milestone 4)
@@ -52,11 +66,15 @@ def combine_signals(model_score: float, style_score: float) -> float:
     The weights in config.py are placeholders. Change them, or ignore them and
     write a different rule.
     """
-    # TODO: replace this
-    return (
+    combined = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
     )
+    # Disagreement rule: "high-confidence AI" needs both signals to lean AI. If
+    # one of them reads human, the most the pair can say is "unsure".
+    if min(model_score, style_score) < config.AI_CONFIRM_FLOOR:
+        combined = min(combined, config.AI_THRESHOLD - 0.01)
+    return round(min(max(combined, 0.0), 1.0), 4)
 
 
 def score_to_label(score: float) -> tuple[str, str]:
@@ -85,12 +103,11 @@ def score_to_label(score: float) -> tuple[str, str]:
     think if they got it on their own work. That question is the whole
     milestone.
     """
-    # TODO: replace this — thresholds are in config.py
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
+        return "ai", LABEL_AI
     if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+        return "human", LABEL_HUMAN
+    return "unsure", LABEL_UNSURE
 
 
 def label_ranges() -> list[tuple[str, str]]:
