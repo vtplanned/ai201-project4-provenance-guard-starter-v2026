@@ -42,63 +42,85 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
+## 1. False positives: my own writing is almost never called AI
 
-<!-- Your criterion. It must name a number. -->
+Of 10 plain paragraphs I wrote myself (60–150 words each, ordinary everyday
+prose, not polished essays), **at most 1 is labelled high-confidence AI**, and
+this holds in each of 3 separate runs of the same 10 pieces. Landing in "unsure"
+doesn't count as a miss.
 
-
-
-**Why this target:**
-
-
-
----
-
-## 2.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+**Why this target:** On a writing site a wrong accusation costs the writer their
+standing, while a missed AI piece costs the site very little. My model signal
+rewards short sentences and common words, which is exactly how plain human
+writers write, so this is where the system is most likely to fail. I picked 1 in
+10 rather than 0 in 10 because gpt2 gives a slightly different score on repeat
+runs and a zero target would be a coin flip I can't control.
 
 ---
 
-## 3.
+## 2. Score spread: clearly-AI and clearly-human text land far apart
 
-<!-- Your criterion. -->
+Take 3 pieces I am confident are AI-generated (generic, evenly paced
+"importance of X" prose, 80+ words) and 3 I am confident are human (personal,
+specific, uneven). The **average combined score of the AI set is at least 0.30
+higher** than the average of the human set, and **no AI piece scores below 0.50
+and no human piece scores above 0.50**.
 
-
-
-**Why this target:**
-
-
-
----
-
-## 4.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+**Why this target:** A confidence score only means something if it moves. If the
+two groups score within 0.1 of each other, the number is noise and the labels
+are a coin flip dressed up. 0.30 is about the width of my unsure band, so the
+two groups have to be separated by at least one label's worth of distance.
 
 ---
 
-## 5.
+## 3. Label coverage: all three labels can be produced
 
-<!-- Your criterion. -->
+Across the inputs I try, **each of the 3 labels (high-confidence human, unsure,
+high-confidence AI) is returned at least once**, and **every score from 0.00 to
+1.00 maps to exactly one of them** (checked by calling `score_to_label` on 0.00,
+0.01, ..., 1.00 and seeing no error and no missing label). Two scores 0.02 apart
+on either side of a threshold, such as 0.63 and 0.67, return different label
+text.
 
+**Why this target:** The "unsure" label is the most important one for a system
+where false accusations are expensive, and it is also the one a careless range
+leaves unreachable. A weighted average of two signals can't leave the range
+between them, so a label can be unreachable even when its range looks fine on
+paper. This criterion catches that.
 
+---
 
-**Why this target:**
+## 4. The appeal path: every appeal is recorded and changes status
 
+For **10 out of 10** appeals sent with a valid `content_id`, the response is
+HTTP 200 and says `under_review`, and `GET /log` then shows a new entry with
+that `content_id`, `status: "under_review"` and my exact reasoning text, while
+the original decision entry is still there unchanged. An appeal with an unknown
+`content_id` returns 404 and writes nothing, and one with empty reasoning
+returns 400.
 
+**Why this target:** The appeal is the only thing standing between a wrong
+accusation and nothing. If even 1 in 10 silently fails, a real writer is being
+ignored without knowing it. It has to be 10 of 10, not "most", because
+there is no acceptable rate of lost appeals. Rejecting unknown ids loudly stops a
+typo from looking like a success.
+
+---
+
+## 5. Bad input: nothing I send can crash the service
+
+Each of these returns a JSON error with an HTTP 4xx status, **never a 500 and
+never a hang**: (a) `text` missing, (b) `text` is `""`, (c) `text` is only
+whitespace, (d) `text` is `null` or a number, (e) `creator_id` missing, (f) a
+body that isn't a JSON object, (g) text 200,000 characters long, and (h) text
+shorter than 3 words. After all eight, `GET /ping` still answers.
+
+**Why this target:** A crash on malformed input is one of the most common real
+failures. The model signal runs inline and slow, so an enormous input is also an
+easy way to tie the service up. All eight must pass because each is a different
+code path and one unhandled one is enough to take the service down. I picked
+200,000 characters because it's far past what gpt2 reads (it only reads the
+first 400 tokens), so the limit is a deliberate choice.
 
 ---
 
