@@ -161,6 +161,35 @@ and so the disagreement rule cannot help.** I did not tune the numbers to hide t
 five texts I would just be fitting the thresholds to my samples. It is a known weakness,
 and it is why the AI label tells writers to appeal.
 
+### Baseline on my own writing (before any changes)
+
+After the build I scored real text offline with both signals: **13 paragraphs I
+wrote myself** (short, plain, everyday topics, ~60-70 words) and **6 paragraphs
+that were AI-generated** (descriptive, sensory: a train over a river, gardening,
+a bookstore, a night market, learning piano, winter mornings). Thresholds and
+weights were not changed to fit them. They are saved in `scenarios.py`, so unit 8
+reruns them three times.
+
+| Set | Pieces | Avg model | Avg style | Avg combined | Labels |
+|---|---|---|---|---|---|
+| My writing | 13 | 0.57 | 0.66 | 0.60 | 2 ai, 10 unsure, 1 human |
+| AI paragraphs | 6 | 0.59 | 0.56 | 0.58 | 1 ai, 5 unsure |
+
+What this says about my criteria:
+
+- **Criterion 1 (at most 1 of 10 of mine labelled AI): missed.** 2 of my 13 were
+  labelled high-confidence AI, and a third scored 0.70, right on the line.
+- **Criterion 2 (AI averages at least 0.30 above human): missed badly.** The gap
+  is -0.02: the AI set scored slightly *lower* than my writing, and one AI piece
+  scored 0.41 while one of mine scored 0.71.
+- **Why:** my writing is plain and evenly paced with common words, which both
+  signals read as AI. The AI paragraphs are vivid with varied detail, which both
+  read as human. For this kind of text the signals point the wrong way, and the
+  disagreement rule can't help because both signals agree.
+- **Limits of this evidence:** 13 and 6 pieces is a small sample, one writer, and
+  the AI set is one style. Generic "importance of technology" AI text scores much
+  higher (0.75 in the calibration run above).
+
 ---
 
 ## Label Variants
@@ -271,31 +300,40 @@ $ curl "http://127.0.0.1:5000/log"   # entries for content_id 06352159c1d5
 
 ## How I Used AI
 
-I built this with Claude Code, working from the assignment text. Two moments, as
-they actually happened:
+I used Claude Code (inside VS Code) for most of this project. It wrote the first
+version of the code from the assignment text. I supplied the test data, made the
+judgment calls about what to do with the results, and decided what to keep. Two
+moments:
 
-**Moment 1: the style signal**
+**Moment 1: the first false positive**
 
-- *What I asked for:* The second signal in `stylometry.py`, using sentence length
-  spread, word variety and punctuation, with each measure's direction written down.
-- *What came back:* Three measures and a 0-1 combine, with scaling ranges that were
-  first-guess numbers. I then ran it on five calibration texts. The plain-human
-  paragraph scored 0.85 on style, which is a false positive.
-- *What I changed:* I kept the honest result instead of tuning the ranges until
-  that paragraph passed, because I'd be fitting five texts. I did change the
-  type-token ratio to use 50-word windows (so a long text isn't punished for
-  repeating common words) and made sentence spread drop out under 3 sentences.
+- *What I asked for:* The whole Unit 7 build from the assignment: the two
+  endpoints, the style signal, the combining rule, three labels, and my five
+  criteria.
+- *What came back:* Working code, and a calibration run where a plain, everyday
+  paragraph scored 0.83 and got the "AI" label. Both signals agreed, so the
+  disagreement rule couldn't catch it.
+- *What I changed:* I did not tune the numbers to hide that result. The criteria
+  were committed first so that a miss would stay a miss. I kept the result as the
+  honest example of the blind spot and wrote it up in Signals and Scoring.
 
-**Moment 2: the combining rule and the bad-input handling**
+**Moment 2: testing with my own writing**
 
-- *What I asked for:* A combining rule that treats a false accusation as the costly
-  error, and a `/submit` that can't crash on bad input.
-- *What came back:* The 0.6/0.4 average with a rule that "AI" needs both signals
-  at 0.50 or above, and validation that refuses missing, empty, short and huge
-  text with 4xx errors.
-- *What I changed:* I raised the AI threshold from the starter's 0.65 to 0.70 so
-  accusing is harder than clearing, and I checked all eight bad inputs by hand with
-  curl rather than trusting the code.
+- *What I asked for:* More evidence than five calibration samples. I gave Claude
+  13 paragraphs I wrote myself and 6 AI-generated paragraphs and asked how the
+  service scored them.
+- *What came back:* The service can't separate the two sets. My writing averaged
+  0.60 and the AI paragraphs 0.58, and 2 of my 13 were labelled AI. That misses
+  criteria 1 and 2.
+- *What I changed:* I saved all 19 pieces in `scenarios.py` for next unit and put
+  the numbers in the README as the "before" baseline. I did not change
+  thresholds or criteria to make them pass, because that would be fitting the
+  system to the test and would throw away the baseline.
+
+**What the AI did and what I did:** The code in `app.py`, `stylometry.py`,
+`scoring.py` and `config.py` was written by Claude Code. My part was the
+test data, labelling which pieces were AI, deciding not to retune, and asking
+for explanations of how each part works so I could defend them.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
