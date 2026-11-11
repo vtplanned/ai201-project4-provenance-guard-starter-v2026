@@ -581,22 +581,54 @@ wrong accusation is the appeal link in the label.
 
 ## Run Log and Verdicts
 
-<!-- Your five criteria across three trials. `run_eval.py --label before`. -->
+Three trials, nothing changed in between. `python run_eval.py --label before`
+(criteria 1, 2, 5, output in `results/run_2026-11-11_0043_before.md`) and
+`python eval_extra.py` (criteria 3 and 4, which `scenarios.py` can't express:
+a 0.00-1.00 label sweep, and submit-then-appeal checked against `GET /log`).
+Both signals are deterministic, so identical trials are expected.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. My own writing flagged as AI | at most 1 of 10 | 2 of 13 | 2 of 13 | 2 of 13 | MISSED |
+| 2. AI vs human spread | AI avg at least 0.30 above human; no AI under 0.50; no human over 0.50 | gap -0.03; 1 AI piece under 0.50 is 0.41; human max 0.71 | same | same | MISSED |
+| 3. All three labels reachable | 3 of 3, every score 0.00-1.00 maps to one | 3/3, 101/101 | 3/3, 101/101 | 3/3, 101/101 | MET |
+| 4. Appeal always recorded and changes status | 10 of 10, 404 unknown id, 400 empty | 10/10, 404, 400 | 10/10, 404, 400 | 10/10, 404, 400 | MET |
+| 5. Bad input returns 4xx, never 500 | 8 of 8, `/ping` still answers | 8/8 (7 x 400, 1 x 413) | 8/8 | 8/8 | MET |
+
+Notes: criterion 1's target is per 10 pieces and I had 13, so 2 of 13 scales to
+about 1.5 of 10, still above 1. Criterion 2's AI set average is 0.577 and my
+writing's is 0.603. The wording in `criteria.md` that the model's scores can vary
+between runs turned out wrong (they didn't), but I left the original text alone.
 
 **Real output from one trial**, pasted as text, naming the file and function
 that produced it:
 
-```json
+*Criterion 1 and 2: `app.py::submit` via `run_eval.py`, trial 1.* Two of my own
+paragraphs came back as AI (13 sent; the "ai" ones):
 
+```json
+[
+  {"status": 200, "guess": "ai", "confidence": 0.7038, "sent": "I learned that you cannot wait for everybody to be ready before you move."},
+  {"status": 200, "guess": "ai", "confidence": 0.7069, "sent": "One hobby I actually enjoy is making content and messing around with ideas for videos."}
+]
 ```
+
+*Criterion 3: `scoring.py::score_to_label` over 0.00-1.00:*
+`{"human": 36, "unsure": 34, "ai": 31}`, and 0.34 / 0.36 and 0.69 / 0.71 return different label text.
+
+*Criterion 4: `app.py::appeal`, with `GET /log` afterwards:*
+
+```json
+{"content_id": "4ed4ecea2359", "message": "Thanks. Your appeal has been recorded and this item is now under review. A person will look at it.", "status": "under_review"}
+```
+```json
+[{"content_id": "4ed4ecea2359", "creator_id": "c4_paste", "guess": "ai", "combined_score": 0.7242, "model_score": 0.6256, "style_score": 0.8722, "status": "decided", "timestamp": "2026-11-11T06:43:56+00:00"},
+ {"content_id": "4ed4ecea2359", "creator_id": "c4_paste", "event": "appeal", "reasoning": "I wrote this myself.", "status": "under_review", "timestamp": "2026-11-11T06:43:56+00:00"}]
+```
+
+*Criterion 5: `app.py::submit` (`_bad`):* `{"text": "", "creator_id": "x"}` returns
+`{"error": "empty_text", "message": "text is empty."}` with 400, and `POST /ping`
+still answers `{"ok": true, ...}` afterwards.
 
 **Diagnoses**
 
