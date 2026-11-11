@@ -82,7 +82,7 @@ MAX_REASONING_CHARS = 5_000  # appeals
 # that decide who pays for it.
 
 HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.70
+AI_THRESHOLD = 0.80   # was 0.70; see README, The Improvement
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub

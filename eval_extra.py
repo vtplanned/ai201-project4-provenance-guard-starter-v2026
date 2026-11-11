@@ -23,8 +23,8 @@ TEXT = ("I walked to the shop this morning and bought bread. The queue was long 
 def criterion_3():
     labels = [scoring.score_to_label(i / 100)[0] for i in range(101)]
     ok = all(l in ("human", "unsure", "ai") for l in labels)
-    flips = (scoring.score_to_label(0.34)[1] != scoring.score_to_label(0.36)[1]
-             and scoring.score_to_label(0.69)[1] != scoring.score_to_label(0.71)[1])
+    flips = (scoring.score_to_label(config.HUMAN_THRESHOLD - 0.01)[1] != scoring.score_to_label(config.HUMAN_THRESHOLD + 0.01)[1]
+             and scoring.score_to_label(config.AI_THRESHOLD - 0.01)[1] != scoring.score_to_label(config.AI_THRESHOLD + 0.01)[1])
     return ok and set(labels) == {"human", "unsure", "ai"} and flips, {l: labels.count(l) for l in set(labels)}
 
 def criterion_4():
