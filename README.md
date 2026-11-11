@@ -330,6 +330,21 @@ moments:
   thresholds or criteria to make them pass, because that would be fitting the
   system to the test and would throw away the baseline.
 
+**Moment 3 (unit 8): the evasion surprise and picking the fix**
+
+- *What I asked for:* Claude Code ran the staff attack set and my five criteria
+  and showed me each attack's model and style scores side by side, then drafted a
+  diagnosis for each broken attack.
+- *What came back:* A draft that said EV01 (typos) should have fooled the style
+  signal. The numbers showed the model signal fell to 0.16 and the style signal
+  stayed at 0.75, so the typos fooled signal one instead.
+- *What I changed:* I wrote the EV01 explanation in my own words, confirmed that
+  signal one is the main stage for the false positives (model 0.74-0.88 on all six
+  accused texts), agreed no criterion needed revising, and chose the fix: raise
+  the AI threshold from 0.70 to 0.80, not reweighting the signals and not the
+  control-character fix. I accepted the cost (AI text at 0.70-0.80 now reads
+  "unsure").
+
 **What the AI did and what I did:** The code in `app.py`, `stylometry.py`,
 `scoring.py` and `config.py` was written by Claude Code. My part was the
 test data, labelling which pieces were AI, deciding not to retune, and asking
