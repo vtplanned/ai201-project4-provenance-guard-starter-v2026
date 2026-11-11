@@ -341,25 +341,29 @@ for explanations of how each part works so I could defend them.
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 5 per minute, 50 per day (`config.py`, applied to `/submit` in `app.py`)
 
-**Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
+**Why those numbers and not others:** A real writer submits, edits and
+resubmits, which is a handful of pieces in a few minutes, so 5 a minute doesn't
+get in their way and 50 a day is far more than anyone writing by hand needs. A
+script mapping my thresholds needs hundreds of small variations, and 50 a day
+makes that slow. The starter's 10/min and 200/day would let a script send 200
+probes a day.
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+**What a caller counts as:** per `creator_id`, falling back to the IP address
+when there isn't one. I chose this so people sharing a network (a school, an
+office) don't share one allowance. The weakness: a script can change its
+`creator_id` on every request and never hit the limit. IP-only counting would
+stop that but would wrongly block shared networks.
 
 **The run of status codes when I pushed past it:**
 
-<!-- python run_attacks.py --flood 15 -->
-
+```
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
 ```
 
-```
+(`python run_attacks.py --flood 15`; the rejections are in `logs/audit.jsonl`
+as `event: rejected, reason: rate_limited, limit: 5 per 1 minute`.)
 
 ---
 
