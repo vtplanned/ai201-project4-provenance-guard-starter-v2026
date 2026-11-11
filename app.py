@@ -41,8 +41,13 @@ app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 def _bad(error: str, message: str, status: int = 400, creator_id: str | None = None):
     """A refused request: a JSON error, and a trace in the log. Never a 500."""
-    if creator_id is not None:
-        audit.log_rejection(creator_id=creator_id, reason=error)
+    # Every refusal leaves a trace, even with no usable creator_id: a request that
+    # is refused and never logged looks exactly like a quiet afternoon.
+    audit.log_rejection(
+        creator_id=creator_id if isinstance(creator_id, str) and creator_id.strip() else "unknown",
+        reason=error,
+        status_code=status,
+    )
     return jsonify({"error": error, "message": message}), status
 
 
@@ -227,9 +232,9 @@ def submit():
     if not isinstance(creator_id, str) or not creator_id.strip():
         return _bad("missing_creator_id", "creator_id must be a non-empty string.")
     if not isinstance(text, str):
-        return _bad("missing_text", "text must be a string.")
+        return _bad("missing_text", "text must be a string.", creator_id=creator_id)
     if not text.strip():
-        return _bad("empty_text", "text is empty.")
+        return _bad("empty_text", "text is empty.", creator_id=creator_id)
     if len(text) > config.MAX_TEXT_CHARS:
         return _bad(
             "text_too_long",
