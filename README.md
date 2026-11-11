@@ -634,21 +634,83 @@ still answers `{"ok": true, ...}` afterwards.
 
 **Diagnoses**
 
-<!-- For each miss AND each broken attack: the stage and the mechanism.
+Every miss and every broken attack, with its stage and mechanism. The five
+stages are the route, signal one (`detector.py::model_signal`), signal two
+(`stylometry.py::style_signal`), the combining rule (`scoring.py::combine_signals`)
+and the label mapping (`scoring.py::score_to_label`). Scores below are
+`model / style / combined` from `logs/audit.jsonl`.
 
-     Your service has five stages: the route, signal one, signal two, the
-     combining rule, and the label mapping.
+**Criteria 1 and 2, and the false positives FP02-FP07. Stage: signal one, with
+signal two reinforcing it.** Six real human texts were labelled high-confidence
+AI: formal register (FP02), a non-native speaker (FP03), a rubric essay (FP04),
+technical documentation (FP05), a person imitating a template (FP06) and a
+deliberate repeat (FP07). The model signal was 0.74-0.88 on every one of them,
+above my 0.70 AI cutoff by itself, while the style signal ranged from 0.52 to
+0.97. The mechanism: gpt2 measures how *predictable* text is, not who wrote it,
+and plain, formal, formulaic or carefully written text is predictable. The same
+mechanism missed criterion 1 (my own short, plain paragraphs #6 and #7 scored
+0.70 and 0.71) and criterion 2: my plain writing averaged 0.603 while the
+AI-written paragraphs, which were vivid and varied, averaged 0.577, so the two
+sets did not separate (gap -0.03, target +0.30). In every one of these cases
+both signals were above 0.50, so my disagreement rule (`AI_CONFIRM_FLOOR`)
+never fired. It only protects against one signal being wrong, not two signals
+being wrong the same way.
 
-     Not a diagnosis:  "The evasion attacks got through."
-     A diagnosis:      "Four evasion inputs got through. All four had typos
-                        added to AI-generated text. My second signal measures
-                        word variety, and typos raise word variety — so it read
-                        them as more human. My combining rule weights that
-                        signal at 0.6, so it dragged the whole score down."
+**EV01 (typos). Stage: signal one, not signal two.** The attacker added
+intentional typos to AI-generated text, hoping the increased word variety would
+lower the style signal and make the text appear more human. Instead the model
+signal dropped to 0.16 while the style signal stayed at 0.75. The misspelled
+words were less predictable to gpt2, which increased perplexity and made the text
+seem more human-written. So the attack fooled signal one rather than signal two,
+which was the original target. My rule weights signal one at 0.6, so that drop
+pulled the combined score down to 0.40 ("unsure").
 
-     Look for a pattern. Five failures on one signal is one problem, not five. -->
+**EV02, EV06, EV07 (shape attacks). Stage: signal two.** EV02 broke AI text into
+short sentences ("Really."), EV06 put one very long and one very short sentence
+in, and EV07 padded the text with punctuation. Style scores fell to 0.26, 0.29
+and 0.12. The mechanism: signal two measures only shape (sentence-length spread
+and punctuation per word), so adding short sentences raises the spread, and extra
+punctuation raises the density, both of which it reads as human. The model
+signal stayed at 0.57-0.59, so the combined scores landed at 0.40-0.46
+("unsure"), and the 0.6 / 0.4 weighting could not rescue them.
 
+**EV08 (short text). Stage: signal one.** The model signal fell to 0.25. A short
+text gives gpt2 little to be predictable about, so the perplexity is noisy and
+tends to be high, which reads as human. The combined score was 0.35, right on the
+human boundary, and the label was "human".
 
+**EV05 (heavy human editing). Stage: signals one and two together.** Both
+signals fell to about 0.31-0.32 (combined 0.32, "human"). When both signals are
+fooled the same way there is nothing for the combining rule to do.
+
+**EV03, EV04, EV09 (near-misses). Stage: the combining rule and the label
+mapping.** These AI texts scored 0.60, 0.67 and 0.63, close to but under my 0.70
+AI cutoff. For EV03 (a pasted quotation) the style signal was 0.49, below the
+0.50 floor, so `AI_CONFIRM_FLOOR` would have capped it under the cutoff even if
+the average had been higher. The mechanism: I set the AI threshold at 0.70 and
+required both signals to agree so that accusing someone is hard. The same
+protection that stops false accusations lets AI text that scores 0.6-0.7 through
+as "unsure". That is a deliberate trade, not a bug, but it is a cost.
+
+**PI02 (fake "SYSTEM:" line). Stage: signal one.** The service does not read
+instructions, and did not obey this one: it asked for confidence 0.02 and got
+0.26. The extra capitalised, unusual line was unpredictable to gpt2, so the model
+signal fell to 0.20 and the AI text was labelled "human". The attack worked by
+accident, the same mechanism as the typos in EV01.
+
+**MF03 (control characters). Stage: the route.** `app.py::submit` only checks
+that `text` is a non-empty string with at least 3 words, so `\x00\x01\x02 test
+\x1b[31mred\x1b[0m` passed. It scored 0.00 / 0.50, was labelled "human" with a
+200, and the escape codes were written into the audit log. It should have been
+refused.
+
+**The pattern.** The failures are mostly one problem, not seventeen. Both of my
+signals measure the *shape* of the text (predictability and rhythm), not who
+wrote it. Anything that changes the shape moves the score in either direction:
+plain human writing moves it up and typos, short sentences or odd lines move AI
+text down. The combining rule has only one defence, the floor, and it only helps
+when the two signals disagree. When both are fooled the same way (the false
+positives, EV05), the rule has nothing to work with.
 
 ---
 
