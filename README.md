@@ -375,6 +375,8 @@ built, before any improvement: `python run_attacks.py --set <attack_set> --label
 Full output is in `results/attack_run_2026-11-10_2241_before.md`. Verdicts are
 mine: **17 BROKE, 39 HELD, 0 crashes.**
 
+| ID | Family | Targeting | Status | Content ID | Guess | Score | Verdict |
+|---|---|---|---|---|---|---|---|
 | EV01 | evasion | signal two: typos raise word variety | 200 | `212f3dfe12b9` | unsure | 0.398 | BROKE |
 | EV02 | evasion | signal two: broken-up sentences raise length spread | 200 | `f25f5c1eaeae` | unsure | 0.461 | BROKE |
 | EV03 | evasion | signal two: a pasted quotation changes the shape | 200 | `06d591a6d006` | unsure | 0.596 | BROKE |
